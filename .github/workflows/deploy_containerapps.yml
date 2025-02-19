@@ -1,0 +1,46 @@
+name: Deploy to Azure Container Apps
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy'
+        required: true
+        default: 'latest'
+      environment:
+        description: 'Environment to deploy to (e.g., dev, stg, pro, prepro, demo, demo2 )'
+        required: true
+        default: 'dev'
+
+env:
+  IMAGE_NAME: image: 'litellm:'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1) Iniciar sesion en Azure con las credenciales guardadas en GitHub
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Temporary fix for dislexicos
+        run: |
+          if [ "${{ github.event.inputs.environment }}" == "stg" ]; then
+            echo "environment=stagging" >> $GITHUB_ENV
+          else
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_ENV
+          fi
+
+      # 2) Desplegar en Container Apps
+      - name: Deploy to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name masterai-backend-litellm \
+            --resource-group td_${{ env.environment }} \
+            --image ghcr.io/berriai/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }} \
+            --set-env-vars DEBUG="${{ vars.DEBUG }}" REDIS_URL="${{ secrets.REDIS_URL }}"
