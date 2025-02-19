@@ -1,0 +1,16 @@
+# Forzar detección de workflow
+name: DeployPrePro
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: prepro-llm-proxy
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          clean: False
+      - name: Ejecutar un script
+        run: |
+          sh docker compose up -d
